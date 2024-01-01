@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>玩伊会英雄联盟内战英雄生成</title>
+    <script src="https://cdn.staticfile.org/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdn.staticfile.org/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.staticfile.org/babel-standalone/7.22.8/babel.min.js"></script>
+    <script src="https://lol.qq.com/act/AutoCMS/publish/LOLAct/ZMSubject_Board_Site/ZMSubject_Board_Site.js"></script>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/animate.css/4.1.1/animate.min.css" />
+    <style type="text/css">
+      * {
+        color: white;
+        text-shadow: 0px 0px 20px rgb(120 120 250);
+        animation-fill-mode: both;
+      }
+      html {
+        height: 100%;
+        width: 100%;
+        background-color: black;
+      }
+      hr {
+        border-width: 1.5px;
+        border-color: white;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+      .hero-container {
+        display: flex;
+        flex-direction: row;
+      }
+      #root {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        align-items: center;
+      }
+      .main {
+        max-width: 1560px;
+        width: 100%;
+      }
+      .team {
+        width: 50%;
+        max-width: 780px;
+        margin-right: 0.5rem;
+        margin-left: 0.5rem;
+        display: flex;
+        flex-direction: column;
+      }
+      .team:first-child {
+        margin-left: 0rem;
+      }
+      .team:last-child {
+        margin-right: 0rem;
+      }
+      .team > span.team-name {
+        width: 125px;
+        background-color: rgb(0 102 204);
+        display: block;
+        text-align: left;
+        padding-left: 5px;
+      }
+      .team * {
+        text-align: center;
+      }
+      /* .team + .team {
+        border-left: 2px solid rgb(120 120 250);
+      } */
+      .team > div.team-heroes {
+        border: 3px solid rgb(0 102 204);
+      }
+      .team-heroes > .free {
+        min-height: 195px;
+      }
+      .team-heroes > .all {
+        min-height: 350px;
+      }
+      .team > div.team-flag {
+        width: 100%;
+        background-color: rgb(0 102 204);
+        display: flex;
+        text-align: left;
+        height: 56px;
+        font-size: xx-large;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        align-items: center;
+        justify-content: center;
+      }
+      .team:last-child > div.team-flag {
+        background-color: rgb(204 0 102);
+      }
+      .team:last-child > div.team-heroes {
+        border: 3px solid rgb(204 0 102);
+
+      }
+      .hero-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 780px;
+      }
+      .hero {
+        display: flex;
+        width: 96px;
+        flex-direction: column;
+        align-items: center;
+        margin-right: 0.5rem;
+        margin-left: 0.5rem;
+      }
+      .hero > img {
+        width: 96px;
+        border: 2px solid rgb(255 255 255 / 20%);
+      }
+      .hero > span {
+        width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .free-list > img {
+        margin-left: 4px;
+      }
+      .top > h1, .top > h5 {
+        text-align: center;
+      }
+      .top > .version {
+        text-align: end;
+      }
+      .free-list {
+        display: flex;
+        justify-content: center;
+        min-width: 36px;
+      }
+      .tool-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 2rem;
+      }
+      .tool-box > button {
+        color: rgb(120 120 250);
+        background: transparent;
+        border: 2px solid rgb(120 120 250);
+        border-radius: 6px;
+        color: white;
+        padding: 16px 32px;
+        text-align: center;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        -webkit-transition-duration: 0.4s; /* Safari */
+        transition-duration: 0.4s;
+        cursor: pointer;
+        text-decoration: none;
+        text-transform: uppercase;
+        width: 128px;
+      }
+      .tool-box > button:hover {
+        background-color: rgb(120 120 250);
+        color: white;
+      }
+
+      @keyframes bounceIn {
+        from { opacity: 0; }
+        to {opacity: 100;}
+
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+
+      async function getFullHeroMap() {
+        const res = await fetch('https://game.gtimg.cn/images/lol/act/img/js/heroList/hero_list.js');
+        const { hero: heroes } = await res.json();
+        return heroes.reduce((map, hero) => Object.assign(map, { [hero.heroId]: hero }), {});
+      }
+
+      function getFreeHeroList() {
+        const allFreeList = window.ZMSubject_Board_Site_List;
+
+        const freeRound = lastFreeRound(allFreeList);
+        const { freeHero, fightHero, foreverFreeHero, newBulle } = allFreeList[freeRound];
+        return { freeHero, fightHero, foreverFreeHero, newBulle };
+      }
+
+      function lastFreeRound(freeList) {
+        return Object.keys(freeList).map(Number).reduce((curr, max) => Math.max(curr, max), 0);
+      }
+
+      function pickRamdom(list, count) {
+        const set = new Set(list);
+        const picked = [];
+        while (picked.length < count && set.size > 0) {
+          const arr = [...set];
+          const idx = Math.floor(Math.random() * arr.length);
+          const item = arr[idx];
+          set.delete(item);
+          picked.push(item);
+        }
+
+        return { remain: [...set], picked: picked };
+      }
+
+      const emptyHeroIds = { pickedHeroIds: [], pickedFreeHeroIds: [] };
+      function generateHeroIds(heroMap, selectedHeroIds) {
+        const { freeHero, foreverFreeHero } = getFreeHeroList();
+        const normalFreeIds = String(`${freeHero},${foreverFreeHero}`).split(',').map(Number);
+
+        const unavailableAllHeroIds = new Set([...normalFreeIds, ...selectedHeroIds]);
+        // calculate remaining hero ids, exclude selected, freeHero from full list
+        const availableHeroIds = Object.keys(heroMap).map(Number).filter(id => !unavailableAllHeroIds.has(id));
+
+        // randomize pick 12 heroes from full list
+        const { remain: remainHeroIds, picked: pickedHeroIds } = pickRamdom(availableHeroIds, 12);
+        const pickedHeroIdsSet = new Set(pickedHeroIds);
+
+        // pick 3 heroes from free list
+        const unavailableFreeHeroIds = new Set([...selectedHeroIds, pickedHeroIds]);
+        const availableFreeHeroIds = normalFreeIds.filter(id => !unavailableFreeHeroIds.has(id));
+        const { picked: pickedFreeHeroIds } = pickRamdom(availableFreeHeroIds, 3);
+
+        return { pickedHeroIds, pickedFreeHeroIds };
+      }
+      let animationDelay = 0;
+      let animationDelay2 = 0;
+      function HeroList({ category, heroMap, heroIds, class: classes }) {
+        return (
+          <div class={classes}>
+            <h5 class="category">{category}</h5>
+            <div class="hero-list">
+              {heroIds.map(key => heroMap[key]).map(hero => (
+                <p class="hero animate__bounceIn" style={{ "animation-delay": `${(++animationDelay) * 0.03}s` }}>
+                  <img src={`https://game.gtimg.cn/images/lol/act/img/champion/${hero.alias}.png`}/>
+                  <span>{hero.name}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+        )
+      }
+
+      function Team({ name, heroMap, heroIds, comment }) {
+        return (
+          <div class="team">
+            <div class="team-flag">
+              <span class="team-name">{name}</span>
+              <span class="team-comment">{comment}</span>
+            </div>
+            <div class="team-heroes">
+              <HeroList class="free" category="周免池" heroIds={heroIds.pickedFreeHeroIds} heroMap={heroMap} />
+              <HeroList class="all" category="全英雄池" heroIds={heroIds.pickedHeroIds} heroMap={heroMap} />
+            </div>
+          </div>
+        );
+      }
+
+
+      function HeroSelection() {
+        const [heroMap, setHeroMap] = React.useState({});
+        const [teamAHeroIds, setTeamA] = React.useState(emptyHeroIds);
+        const [teamBHeroIds, setTeamB] = React.useState(emptyHeroIds);
+        const [loading, setLoading] = React.useState(false);
+
+        function clean() {
+          animationDelay = 0;
+          animationDelay2 = 0;
+          setTeamA(emptyHeroIds);
+          setTeamB(emptyHeroIds);
+        }
+        function refresh(fullMap) {
+          const a = generateHeroIds(fullMap, []);
+          const b = generateHeroIds(fullMap, [...a.pickedFreeHeroIds, ...a.pickedHeroIds]);
+          setTeamA(a);
+          setTeamB(b);
+        }
+        React.useEffect(async () => {
+            const fullMap = await getFullHeroMap();
+            setHeroMap(fullMap);
+            refresh(fullMap);
+        }, [])
+        const click = React.useCallback(async () => {
+            clean();
+            await new Promise((res, rej) => {
+              setTimeout(res, 200)
+            });
+            refresh(heroMap);
+          }, [heroMap]);
+        const heroIds = Object.keys(heroMap)
+        if (heroIds.length == 0) {
+          return <h1></h1>
+        }
+
+        const { newBulle } = getFreeHeroList();
+
+        return (
+          <div class="main">
+            <div class="top">
+              <h1 class="animate__backInDown" style={{ "animation-delay": `${(++animationDelay2) * 0.01}s` }}>玩伊会<br />大乱斗内战骰子</h1>
+            </div>
+            <div class="hero-container">
+              <Team name="队伍1" heroMap={heroMap} heroIds={teamAHeroIds} comment="" />
+              <Team name="队伍2" heroMap={heroMap} heroIds={teamBHeroIds} comment="" />
+            </div>
+            <div class="tool-box">
+              <button onClick={click}>刷新</button>
+              <p class="version">周免#{newBulle.freeNum}, {newBulle.iDate} 版本:{newBulle.version}</p>
+            </div>
+          </div>
+        );
+      }
+
+      const container = document.getElementById('root');
+      const root = ReactDOM.createRoot(container);
+      root.render(<HeroSelection />);
+
+    </script>
+  </body>
+</html>
